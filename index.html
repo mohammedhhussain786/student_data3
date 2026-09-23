@@ -1,1 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Department Portal - Role-Based Access</title>
+  
+  <!-- React & Babel CDNs -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f1f5f9; color: #1e293b; padding: 20px; }
+    .portal-container { max-width: 1200px; margin: 0 auto; background: #ffffff; padding: 28px; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
+    
+    .top-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; }
+    .header-title { font-size: 22px; font-weight: 700; color: #0f172a; }
+    .header-sub { font-size: 13px; color: #64748b; margin-top: 4px; }
+    .role-badge { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; background-color: #2563eb; color: #ffffff; }
+    .role-badge.hod { background-color: #7c3aed; }
+    .role-badge.faculty { background-color: #059669; }
+    
+    .tabs-nav { display: flex; gap: 8px; margin-top: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 2px; }
+    .tab-btn { padding: 10px 18px; border: none; background: transparent; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; border-radius: 6px; transition: all 0.2s ease; }
+    .tab-btn.active { color: #2563eb; background-color: #eff6ff; border-bottom: 2px solid #2563eb; }
+    
+    .login-box { max-width: 400px; margin: 60px auto; padding: 32px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+    .login-title { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #475569; display: block; margin-bottom: 6px; }
+    .form-control { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; }
+    .btn-primary { width: 100%; padding: 10px; background-color: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+    .btn-primary:hover { background-color: #1d4ed8; }
+    
+    .selector-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0; }
+    .control-group { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+    .select-label { font-size: 13px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px; }
+    .custom-select, .search-input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; background-color: #ffffff; }
+    
+    .data-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    .data-table th, .data-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+    .data-table th { background-color: #f8fafc; color: #475569; font-weight: 600; }
+    
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-block; }
+    .badge-present { background-color: #dcfce7; color: #15803d; }
+    .badge-absent { background-color: #fee2e2; color: #b91c1c; }
+    
+    .stat-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 8px; text-align: center; }
+    .stat-number { font-size: 22px; font-weight: 700; color: #2563eb; margin-top: 4px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const initialStudents = [
+      { rollNo: "25G01A4301", name: "A B Suresh", department: "AI" },
+      { rollNo: "25G01A4302", name: "A G Jamuna", department: "AI" },
+      { rollNo: "25G01A4303", name: "A M Dhanush", department: "AI" },
+      { rollNo: "25G01A4304", name: "A P Yamini", department: "AI" },
+      { rollNo: "25G01A4305", name: "A Preethi", department: "AI" },
+      { rollNo: "25G01A4306", name: "A Vishnuvardhan", department: "AI" },
+      { rollNo: "25G01A4307", name: "Avula Dharani Yadav", department: "AI" },
+      { rollNo: "25G01A4308", name: "Alluganti Varun Kumar Reddy", department: "AI" },
+      { rollNo: "25G01A4309", name: "Ambati Ajuri Lakshmi Poojitha", department: "AI" },
+      { rollNo: "25G01A4310", name: "Andhi Naga Pranathi", department: "AI" }
+    ];
+
+    function App() {
+      const [currentUser, setCurrentUser] = React.useState(null); // { role: 'HOD' | 'FACULTY' | 'STUDENT', name: '' }
+      const [loginRole, setLoginRole] = React.useState('FACULTY');
+      const [username, setUsername] = React.useState('');
+      const [password, setPassword] = React.useState('');
+      const [studentRoll, setStudentRoll] = React.useState('');
+      
+      const [activeTab, setActiveTab] = React.useState('mark');
+      const [selectedDay, setSelectedDay] = React.useState('MON');
+      const [searchTerm, setSearchTerm] = React.useState('');
+
+      // Permissions setup: Faculty edit permission controlled by HOD
+      const [facultyCanEdit, setFacultyCanEdit] = React.useState(() => {
+        return localStorage.getItem('faculty_can_edit') !== 'false';
+      });
+
+      // Daily attendance state initialization
+      const [attendanceRecords, setAttendanceRecords] = React.useState(() => {
+        const saved = localStorage.getItem('ai_daily_attendance');
+        if (saved) {
+          try { return JSON.parse(saved); } catch (e) { console.error(e); }
+        }
+        const days = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
+        const initial = {};
+        days.forEach(day => {
+          initial[day] = initialStudents.map(s => ({ ...s, status: 'Present' }));
+        });
+        return initial;
+      });
+
+      React.useEffect(() => {
+        localStorage.setItem('ai_daily_attendance', JSON.stringify(attendanceRecords));
+      }, [attendanceRecords]);
+
+      React.useEffect(() => {
+        localStorage.setItem('faculty_can_edit', facultyCanEdit);
+      }, [facultyCanEdit]);
+
+      const handleLogin = (e) => {
+        e.preventDefault();
+        if (loginRole === 'HOD') {
+          if (password === 'hod123') {
+            setCurrentUser({ role: 'HOD', name: 'Dr. Head of Department' });
+            setActiveTab('summary');
+          } else {
+            alert('Invalid HOD Password (Default: hod123)');
+          }
+        } else if (loginRole === 'FACULTY') {
+          setCurrentUser({ role: 'FACULTY', name: username || 'Faculty Member' });
+          setActiveTab('mark');
+        } else if (loginRole === 'STUDENT') {
+          const found = initialStudents.find(s => s.rollNo.toLowerCase() === studentRoll.toLowerCase());
+          if (found) {
+            setCurrentUser({ role: 'STUDENT', name: found.name, rollNo: found.rollNo });
+            setActiveTab('my_status');
+          } else {
+            alert('Roll Number not found! Try 25G01A4301');
+          }
+        }
+      };
+
+      const handleStatusToggle = (rollNo) => {
+        if (currentUser.role === 'FACULTY' && !facultyCanEdit) {
+          alert("Editing is currently locked by the HOD.");
+          return;
+        }
+
+        setAttendanceRecords(prev => {
+          const currentDayRecords = prev[selectedDay] || [];
+          const updated = currentDayRecords.map(student => {
+            if (student.rollNo === rollNo) {
+              return { ...student, status: student.status === 'Present' ? 'Absent' : 'Present' };
+            }
+            return student;
+          });
+          return { ...prev, [selectedDay]: updated };
+        });
+      };
+
+      const calculateStudentStats = (rollNo) => {
+        let presentDays = 0;
+        let totalDays = 0;
+        Object.keys(attendanceRecords).forEach(day => {
+          const record = attendanceRecords[day].find(s => s.rollNo === rollNo);
+          if (record) {
+            totalDays++;
+            if (record.status === 'Present') presentDays++;
+          }
+        });
+        const absentDays = totalDays - presentDays;
+        const percentage = totalDays > 0 ? ((presentDays / totalDays) * 100).toFixed(1) : 0;
+        return { presentDays, absentDays, totalDays, percentage };
+      };
+
+      if (!currentUser) {
+        return (
+          <div className="login-box">
+            <h2 className="login-title">Portal Login</h2>
+            <form onSubmit={handleLogin}>
+              <div className="form-group">
+                <label>Login As:</label>
+                <select className="form-control" value={loginRole} onChange={e => setLoginRole(e.target.value)}>
+                  <option value="FACULTY">Faculty Member</option>
+                  <option value="HOD">Head of Department (HOD)</option>
+                  <option value="STUDENT">Student</option>
+                </select>
+              </div>
+
+              {loginRole === 'HOD' && (
+                <div className="form-group">
+                  <label>Password:</label>
+                  <input type="password" className="form-control" placeholder="Enter HOD Password (hod123)" value={password} onChange={e => setPassword(e.target.value)} required />
+                </div>
+              )}
+
+              {loginRole === 'FACULTY' && (
+                <div className="form-group">
+                  <label>Faculty Name:</label>
+                  <input type="text" className="form-control" placeholder="Enter Name" value={username} onChange={e => setUsername(e.target.value)} required />
+                </div>
+              )}
+
+              {loginRole === 'STUDENT' && (
+                <div className="form-group">
+                  <label>Roll Number:</label>
+                  <input type="text" className="form-control" placeholder="e.g. 25G01A4301" value={studentRoll} onChange={e => setStudentRoll(e.target.value)} required />
+                </div>
+              )}
+
+              <button type="submit" className="btn-primary">Sign In</button>
+            </form>
+          </div>
+        );
+      }
+
+      const filteredStudents = (attendanceRecords[selectedDay] || []).filter(
+        s => s.rollNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             s.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      return (
+        <div className="portal-container">
+          <div className="top-bar">
+            <div>
+              <h1 className="header-title">AI Department Attendance Portal</h1>
+              <p className="header-sub">Welcome, <strong>{currentUser.name}</strong></p>
+            </div>
+            <div>
+              <span className={`role-badge ${currentUser.role.toLowerCase()}`}>{currentUser.role}</span>
+              <button onClick={() => setCurrentUser(null)} style={{ marginLeft: '12px', padding: '6px 12px', cursor: 'pointer', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc' }}>
+                Logout
+              </button>
+            </div>
+          </div>
+
+          <div className="tabs-nav">
+            {(currentUser.role === 'HOD' || currentUser.role === 'FACULTY') && (
+              <button className={`tab-btn ${activeTab === 'mark' ? 'active' : ''}`} onClick={() => setActiveTab('mark')}>
+                Mark Attendance
+              </button>
+            )}
+            
+            {(currentUser.role === 'HOD' || currentUser.role === 'FACULTY') && (
+              <button className={`tab-btn ${activeTab === 'summary' ? 'active' : ''}`} onClick={() => setActiveTab('summary')}>
+                Overall Attendance Summary
+              </button>
+            )}
+
+            {currentUser.role === 'HOD' && (
+              <button className={`tab-btn ${activeTab === 'permissions' ? 'active' : ''}`} onClick={() => setActiveTab('permissions')}>
+                Faculty Permissions
+              </button>
+            )}
+
+            {currentUser.role === 'STUDENT' && (
+              <button className={`tab-btn ${activeTab === 'my_status' ? 'active' : ''}`} onClick={() => setActiveTab('my_status')}>
+                My Attendance Status
+              </button>
+            )}
+          </div>
+
+          {/* TAB 1: MARK ATTENDANCE */}
+          {activeTab === 'mark' && (
+            <div>
+              <div className="selector-card">
+                <div className="control-group">
+                  <div>
+                    <label className="select-label">Select Day:</label>
+                    <select className="custom-select" value={selectedDay} onChange={e => setSelectedDay(e.target.value)}>
+                      {['MON', 'TUE', 'WED', 'THU', 'FRI'].map(day => <option key={day} value={day}>{day}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flexGrow: 1 }}>
+                    <label className="select-label">Search Student:</label>
+                    <input type="text" className="search-input" placeholder="Roll No or Name..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ width: '100%' }} />
+                  </div>
+                </div>
+                {currentUser.role === 'FACULTY' && !facultyCanEdit && (
+                  <div style={{ marginTop: '12px', color: '#b91c1c', fontSize: '13px', fontWeight: 'bold' }}>
+                    ⚠️ Note: Attendance editing is currently disabled by the HOD.
+                  </div>
+                )}
+              </div>
+
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Roll No</th>
+                    <th>Student Name</th>
+                    <th>Status ({selectedDay})</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStudents.map((student) => (
+                    <tr key={student.rollNo}>
+                      <td><strong>{student.rollNo}</strong></td>
+                      <td>{student.name}</td>
+                      <td>
+                        <span className={`badge ${student.status === 'Present' ? 'badge-present' : 'badge-absent'}`}>
+                          {student.status}
+                        </span>
+                      </td>
+                      <td>
+                        <button 
+                          onClick={() => handleStatusToggle(student.rollNo)}
+                          disabled={currentUser.role === 'FACULTY' && !facultyCanEdit}
+                          style={{ padding: '4px 10px', cursor: 'pointer', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                        >
+                          Toggle Status
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* TAB 2: OVERALL SUMMARY (HOD / FACULTY) */}
+          {activeTab === 'summary' && (
+            <div style={{ marginTop: '20px' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Roll No</th>
+                    <th>Student Name</th>
+                    <th>Days Present</th>
+                    <th>Days Absent</th>
+                    <th>Total Recorded Days</th>
+                    <th>Attendance %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {initialStudents.map((student) => {
+                    const stats = calculateStudentStats(student.rollNo);
+                    return (
+                      <tr key={student.rollNo}>
+                        <td><strong>{student.rollNo}</strong></td>
+                        <td>{student.name}</td>
+                        <td style={{ color: '#15803d', fontWeight: 'bold' }}>{stats.presentDays} Days</td>
+                        <td style={{ color: '#b91c1c', fontWeight: 'bold' }}>{stats.absentDays} Days</td>
+                        <td>{stats.totalDays} Days</td>
+                        <td><strong>{stats.percentage}%</strong></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* TAB 3: FACULTY PERMISSIONS (HOD EXCLUSIVE) */}
+          {activeTab === 'permissions' && currentUser.role === 'HOD' && (
+            <div className="selector-card" style={{ marginTop: '20px' }}>
+              <h3 style={{ marginBottom: '12px' }}>Faculty Marking Permissions</h3>
+              <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px' }}>
+                Control whether faculty members are allowed to alter daily attendance records.
+              </p>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: '600' }}>
+                <input 
+                  type="checkbox" 
+                  checked={facultyCanEdit} 
+                  onChange={e => setFacultyCanEdit(e.target.checked)} 
+                  style={{ width: '18px', height: '18px' }}
+                />
+                Allow Faculty to Mark / Edit Attendance
+              </label>
+            </div>
+          )}
+
+          {/* TAB 4: STUDENT VIEW */}
+          {activeTab === 'my_status' && currentUser.role === 'STUDENT' && (
+            <div style={{ marginTop: '20px' }}>
+              {(() => {
+                const stats = calculateStudentStats(currentUser.rollNo);
+                return (
+                  <div>
+                    <div className="stats-grid">
+                      <div className="stat-card">
+                        <div>Days Present</div>
+                        <div className="stat-number" style={{ color: '#15803d' }}>{stats.presentDays}</div>
+                      </div>
+                      <div className="stat-card">
+                        <div>Days Absent</div>
+                        <div className="stat-number" style={{ color: '#b91c1c' }}>{stats.absentDays}</div>
+                      </div>
+                      <div className="stat-card">
+                        <div>Total Days</div>
+                        <div className="stat-number">{stats.totalDays}</div>
+                      </div>
+                      <div className="stat-card">
+                        <div>Attendance Percentage</div>
+                        <div className="stat-number">{stats.percentage}%</div>
+                      </div>
+                    </div>
+
+                    <h3 style={{ margin: '16px 0 8px 0' }}>Daily Breakup</h3>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Day</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {['MON', 'TUE', 'WED', 'THU', 'FRI'].map(day => {
+                          const dayRecord = (attendanceRecords[day] || []).find(s => s.rollNo === currentUser.rollNo);
+                          return (
+                            <tr key={day}>
+                              <td><strong>{day}</strong></td>
+                              <td>
+                                <span className={`badge ${dayRecord?.status === 'Present' ? 'badge-present' : 'badge-absent'}`}>
+                                  {dayRecord?.status || 'N/A'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
